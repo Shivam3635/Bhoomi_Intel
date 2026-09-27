@@ -229,6 +229,7 @@ class ResearchQueryResponse(BaseModel):
     spatial_context: Dict[str, Any]
     recommended_scenarios: List[str]
     disclaimer: str
+    llm_engine: Optional[str] = None
 
 # Policy Brief
 class PolicyBriefRequest(BaseModel):
@@ -255,6 +256,7 @@ class PolicyBriefResponse(BaseModel):
     limitations: List[str]
     sources: List[str]
     printable_html: str
+    llm_engine: Optional[str] = None
 
 # Research Project
 class ProjectCreate(BaseModel):

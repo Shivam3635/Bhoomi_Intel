@@ -9,6 +9,7 @@ import json
 
 router = APIRouter(prefix="/policy-brief", tags=["Policy Brief Generator"])
 
+@router.post("", response_model=PolicyBriefResponse)
 @router.post("/generate", response_model=PolicyBriefResponse)
 def generate_brief(
     req: PolicyBriefRequest,
