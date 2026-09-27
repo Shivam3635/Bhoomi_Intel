@@ -159,13 +159,20 @@ export const PolicyBriefView: React.FC<PolicyBriefViewProps> = ({
         <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl shadow-md p-8 sm:p-12 max-w-4xl mx-auto space-y-6 text-slate-800 dark:text-slate-200 font-sans">
           {/* Document Header */}
           <div className="border-b-2 border-blue-900 dark:border-blue-500 pb-5">
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2 flex-wrap gap-2">
               <span className="font-semibold uppercase tracking-wider text-blue-950 dark:text-blue-300">
                 Ministry of Rural Development • Department of Land Resources (DoLR)
               </span>
-              <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
-                {brief.id}
-              </span>
+              <div className="flex items-center gap-2">
+                {brief.llm_engine && (
+                  <span className="text-[10px] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold px-2 py-0.5 rounded-full font-mono">
+                    {brief.llm_engine}
+                  </span>
+                )}
+                <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 font-bold">
+                  {brief.id}
+                </span>
+              </div>
             </div>
             <h1 className="text-2xl font-bold text-blue-950 dark:text-blue-200 tracking-tight">
               {brief.title}

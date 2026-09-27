@@ -65,17 +65,23 @@ class PolicyBriefService:
                     ]
                 }
 
-            exec_summary = (
-                f"This evidence-based policy brief examines the land governance challenges confronting {district} ({state}) "
-                f"under rapid transportation and logistics infrastructure expansion. Empirical research indicates that "
-                f"linear corridor developments accelerate the diversion of prime double-cropped irrigated land by 14.8%, "
-                f"while increasing impervious surfaces and exacerbating monsoon drainage congestion. Simulated policy trajectories "
-                f"show that unchecked 20% corridor expansion could displace up to 101 sq km of fertile agricultural topsoil by {target_year}. "
-                f"To maintain economic growth while safeguarding food security and groundwater recharge, this brief recommends a four-pillar "
-                f"spatial governance intervention: (1) Mandate a 500-meter protected agricultural green belt along arterial spurs; "
-                f"(2) Enact statutory Transferable Development Rights (TDR); (3) Integrate DILRMP spatial cadastral maps into municipal master plans; "
-                f"and (4) Institute mandatory hydrological catchment preservation covenants."
-            )
+            # Check for live Gemini policy brief enhancement
+            gemini_enhancement = self._gemini_brief_synthesis(district, state, q, ind, scenario_data)
+
+            if gemini_enhancement and "executive_summary" in gemini_enhancement:
+                exec_summary = gemini_enhancement["executive_summary"]
+            else:
+                exec_summary = (
+                    f"This evidence-based policy brief examines the land governance challenges confronting {district} ({state}) "
+                    f"under rapid transportation and logistics infrastructure expansion. Empirical research indicates that "
+                    f"linear corridor developments accelerate the diversion of prime double-cropped irrigated land by 14.8%, "
+                    f"while increasing impervious surfaces and exacerbating monsoon drainage congestion. Simulated policy trajectories "
+                    f"show that unchecked 20% corridor expansion could displace up to 101 sq km of fertile agricultural topsoil by {target_year}. "
+                    f"To maintain economic growth while safeguarding food security and groundwater recharge, this brief recommends a four-pillar "
+                    f"spatial governance intervention: (1) Mandate a 500-meter protected agricultural green belt along arterial spurs; "
+                    f"(2) Enact statutory Transferable Development Rights (TDR); (3) Integrate DILRMP spatial cadastral maps into municipal master plans; "
+                    f"and (4) Institute mandatory hydrological catchment preservation covenants."
+                )
 
             current_evidence = [
                 f"Multi-temporal satellite LULC mapping confirms a baseline built-up footprint of {ind.built_up_area_sqkm if ind else 542.4} sq km in {district}.",
@@ -102,19 +108,19 @@ class PolicyBriefService:
                 "cadastral_status": "Over 86% of revenue village maps have been digitized and geo-referenced with text Khatauni records."
             }
 
-            potential_risks = [
+            potential_risks = (gemini_enhancement.get("potential_risks") if gemini_enhancement and "potential_risks" in gemini_enhancement else [
                 "Irreversible loss of Class-I fertile agricultural topsoil to speculative low-density logistics layouts.",
                 "Aggravated urban runoff and flash waterlogging affecting over 380,000 residents in peri-urban catchments.",
                 "Groundwater over-extraction in non-regulated commercial zones dropping water tables by 1.2m annually.",
                 "Proliferation of boundary and inheritance title disputes due to accelerated land valuation spikes."
-            ]
+            ])
 
-            possible_interventions = [
+            possible_interventions = (gemini_enhancement.get("possible_interventions") if gemini_enhancement and "possible_interventions" in gemini_enhancement else [
                 "Establish a statutory 500-meter Agricultural Preservation Buffer Zone along expressway rights-of-way.",
                 "Implement Transferable Development Rights (TDR) allowing landowners to monetize development rights without land paving.",
                 "Mandate GIS-based Cadastral Clearance (ULPIN/Bhu-Aadhaar verification) prior to commercial layout sanctioning.",
                 "Impose mandatory rainwater percolation and groundwater recharge reservoirs for all logistics and industrial plots exceeding 1 hectare."
-            ]
+            ])
 
             assumptions = [
                 "Land conversion elasticity: 85% of expanded built-up area displaces contiguous agricultural land.",
@@ -280,9 +286,63 @@ class PolicyBriefService:
                 "assumptions": assumptions,
                 "limitations": limitations,
                 "sources": sources,
-                "printable_html": html_content
+                "printable_html": html_content,
+                "llm_engine": "Google Gemini 3.8 Flash (Live Grounded Synthesis)" if gemini_enhancement else "Grounded Evidence Template Engine"
             }
         finally:
             db.close()
+
+    def _gemini_brief_synthesis(self, district: str, state: str, question: str, ind: Any, scenario_data: Any) -> Optional[Dict[str, Any]]:
+        from app.core.config import settings
+        import urllib.request
+        import json
+        import re
+
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            return None
+
+        prompt = f"""You are the senior land-governance policy analyst for BHUMI-INTEL (Department of Land Resources - DoLR, Ministry of Rural Development, Government of India).
+Synthesize an executive summary, potential governance/ecological risks, and 4 evidence-based policy interventions for a national policy brief.
+
+LOCATION: {district}, {state}
+CORE POLICY QUESTION: "{question}"
+CURRENT BASELINE:
+- Built-up area: {ind.built_up_area_sqkm if ind else 542.4} sq km
+- Agricultural area: {ind.agricultural_area_sqkm if ind else 1420.2} sq km
+- Infrastructure Index: {ind.infrastructure_index if ind else 78.4}/100
+- Climate Vulnerability Score: {ind.climate_risk_score if ind else 52.0}/100
+
+SCENARIO TRAJECTORY:
+{json.dumps(scenario_data.get('results', []), indent=2)}
+
+Format your response STRICTLY as a JSON object within a ```json code block with the following keys:
+{{
+  "executive_summary": "4-5 sentence authoritative executive policy narrative directly addressing the question with quantitative metrics.",
+  "potential_risks": ["Risk 1", "Risk 2", "Risk 3", "Risk 4"],
+  "possible_interventions": ["Intervention 1", "Intervention 2", "Intervention 3", "Intervention 4"]
+}}"""
+
+        model_name = getattr(settings, "GEMINI_MODEL", "gemini-3.8-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+
+        import time
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    txt = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', txt, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(1))
+                    return json.loads(txt.strip())
+            except Exception as e:
+                if attempt == 0:
+                    time.sleep(1.2)
+                    continue
+                print(f"[PolicyBriefService] Gemini brief synthesis fallback: {e}")
+                return None
 
 policy_brief_service = PolicyBriefService()

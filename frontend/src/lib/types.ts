@@ -54,6 +54,7 @@ export interface ResearchAnswer {
   spatial_context: Record<string, any>;
   recommended_scenarios: string[];
   disclaimer: string;
+  llm_engine?: string;
 }
 
 export interface ScenarioResultItem {
@@ -172,4 +173,5 @@ export interface PolicyBriefData {
   limitations: string[];
   sources: string[];
   printable_html: string;
+  llm_engine?: string;
 }

@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     GEOSERVER_ENABLED: bool = False
     
     # LLM Settings (OpenAI / Gemini / Anthropic / Local Fallback)
-    LLM_PROVIDER: str = "fallback"  # "fallback", "gemini", "openai"
+    LLM_PROVIDER: str = "gemini"  # "gemini", "fallback", "openai"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     
@@ -39,7 +40,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "*"]
 
     class Config:
-        env_file = ".env"
+        env_file = [".env", "../.env"]
         extra = "allow"
 
 settings = Settings()

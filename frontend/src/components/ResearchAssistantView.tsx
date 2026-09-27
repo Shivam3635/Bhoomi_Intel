@@ -269,16 +269,24 @@ export const ResearchAssistantView: React.FC<ResearchAssistantViewProps> = ({
           {answerData && !loading && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs space-y-5">
               
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
                 <div className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <h2 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                     Evidence Synthesis
                   </h2>
                 </div>
-                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded font-mono">
-                  {answerData.confidence}
-                </span>
+                <div className="flex items-center gap-2">
+                  {answerData.llm_engine && (
+                    <span className="text-[10px] bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                      <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      {answerData.llm_engine}
+                    </span>
+                  )}
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded font-mono">
+                    {answerData.confidence}
+                  </span>
+                </div>
               </div>
 
               {/* Core Answer */}
