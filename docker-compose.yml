@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bhumi_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEMO_MODE=true
+      - PROJECT_NAME=BHUMI-INTEL
+      - DATABASE_URL=sqlite:///./bhumi_intel.db
+      - ELASTICSEARCH_ENABLED=false
+      - GEOSERVER_ENABLED=false
+      - LLM_PROVIDER=fallback
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./backend/data:/app/data
+    networks:
+      - bhumi_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bhumi_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - bhumi_net
+
+  # Optional production infrastructure services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: bhumi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bhumi_user
+      POSTGRES_PASSWORD: bhumi_password
+      POSTGRES_DB: bhumi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - bhumi_net
+    profiles: ["full-prod"]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: bhumi_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - bhumi_net
+    profiles: ["full-prod"]
+
+  geoserver:
+    image: oscarfonts/geoserver:2.24.1
+    container_name: bhumi_geoserver
+    restart: unless-stopped
+    environment:
+      - GEOSERVER_ADMIN_PASSWORD=geoserver
+    ports:
+      - "8080:8080"
+    volumes:
+      - geodata:/var/local/geoserver
+    networks:
+      - bhumi_net
+    profiles: ["full-prod"]
+
+networks:
+  bhumi_net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  esdata:
+  geodata:
